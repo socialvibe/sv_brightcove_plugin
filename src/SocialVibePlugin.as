@@ -77,31 +77,6 @@ package
 				_experienceModule.addEventListener(ExperienceEvent.TEMPLATE_READY, onTemplateReady);
 		}
 		
-		private function disableAds():void
-		{
-			_adPolicy = _adModule.getAdPolicy();
-			
-			var newAdPolicy:Object = _adModule.getAdPolicy();
-			//_adModule.enableExternalAds(false);
-			//_adModule.enableOverrideAds(false);
-			
-			var blockAdPolicy:Object = new Object();
-			blockAdPolicy.adPlayCap = 0;
-			blockAdPolicy.playAdOnLoad = false;
-			blockAdPolicy.prerollAds = false;
-			blockAdPolicy.midrollAds = false;
-			blockAdPolicy.postrollAds = false;
-			_adModule.setAdPolicy(blockAdPolicy);
-		}
-		
-		private function showLoading():void
-		{
-			_loading = new LoadingClass() as Bitmap;
-			_loading.x = (_videoPlayerModule.getDisplayWidth() - _loading.width)/2;
-			_loading.y = (_videoPlayerModule.getDisplayHeight() - _loading.height)/2;
-			_experienceModule.getStage().addChild(_loading);
-		}
-		
 		private function onTemplateReady(event:ExperienceEvent):void
 		{ 
 			_experienceModule.removeEventListener(ExperienceEvent.TEMPLATE_READY, onTemplateReady);
@@ -117,34 +92,36 @@ package
 			_videoPlayerModule.addEventListener(MediaEvent.BEGIN, onMediaBegin);
 			_videoPlayerModule.addEventListener(MediaEvent.PLAY, onMediaPlay);
 			
-			
-			
+			// disable video controls //
 			_videoPlayerModule.setEnabled(false);
 			
+			// parse out partner config hash from plugin URL //
 			var args:Array = LoaderInfo(_experienceModule.getStage().root.loaderInfo).url.split('pch=');
-			
 			if (args.length > 0)
 				_parnter_config_hash = args[1];
 			_experienceModule.debug('partner_config_hash:' + _parnter_config_hash);
 			
-			/*
+			// check sv flash cookie for network_user_id //
 			var cookie:SharedObject = SharedObject.getLocal('sv1', "/");
 			if (cookie && cookie.data['nuid'])
 			{
-			_network_user_id = cookie.data['nuid'] as String;
+				_network_user_id = cookie.data['nuid'] as String;
 			}
 			else
 			{
-			_network_user_id = GUID.create();
-			if (cookie)
-			{
-			cookie.data['nuid'] = _network_user_id;
-			cookie.flush();
+				// if no network_user_id in cookie, create one //
+				_network_user_id = GUID.create();
+				if (cookie)
+				{
+					cookie.data['nuid'] = _network_user_id;
+					cookie.flush();
+				}
 			}
-			}
-			*/
-			_network_user_id = String(Math.round(Math.random()*1000000));
 			
+			// for testing //
+			//_network_user_id = String(Math.round(Math.random()*1000000));
+			
+			// fetch available sv activities //
 			var onLoad:Function = function(e:Event):void {
 				_availableActivities = new JSONDecoder(e.currentTarget.data, false).getValue();
 				dispatchEvent(new Event(SV_ACTIVITIES_READY));
@@ -168,10 +145,12 @@ package
 		private function onMediaBegin(event:MediaEvent):void {
 			_videoPlayerModule.removeEventListener(MediaEvent.BEGIN, onMediaBegin);
 			
+			// when video plays, pause it and check for sv activities //
 			_videoPlayerModule.pause(true);
 			
 			if (_availableActivities == null)
 			{
+				// waiting on available activities call to return //
 				showLoading();
 				
 				addEventListener(SV_ACTIVITIES_READY, beginSocialVibe, false, 0, true);
@@ -191,12 +170,13 @@ package
 			
 			if (_availableActivities.length == 0)
 			{
-				_experienceModule.debug('playing video');
+				// no available sv activities.  re-enable player and play video //
 				_videoPlayerModule.setEnabled(true);
 				_videoPlayerModule.play();
 			}
 			else
 			{
+				// an sv activity is available.  render ad user choice //
 				var activity:Object = _availableActivities[0];
 				_activityId = Number(activity.id);
 				
@@ -278,6 +258,30 @@ package
 				logo.y = _videoPlayerModule.getDisplayHeight() - logo.height;
 				_svUnit.addChild(logo);
 			}
+		}
+		
+		private function disableAds():void
+		{
+			_adPolicy = _adModule.getAdPolicy();
+			
+			var newAdPolicy:Object = _adModule.getAdPolicy();
+			
+			// disable ads //
+			var blockAdPolicy:Object = new Object();
+			blockAdPolicy.adPlayCap = 0;
+			blockAdPolicy.playAdOnLoad = false;
+			blockAdPolicy.prerollAds = false;
+			blockAdPolicy.midrollAds = false;
+			blockAdPolicy.postrollAds = false;
+			_adModule.setAdPolicy(blockAdPolicy);
+		}
+		
+		private function showLoading():void
+		{
+			_loading = new LoadingClass() as Bitmap;
+			_loading.x = (_videoPlayerModule.getDisplayWidth() - _loading.width)/2;
+			_loading.y = (_videoPlayerModule.getDisplayHeight() - _loading.height)/2;
+			_experienceModule.getStage().addChild(_loading);
 		}
 		
 		private function sizedPopup(url:String, width:String, height:String):void
